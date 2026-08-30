@@ -1,0 +1,12 @@
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+scrapling>=0.2.0
+beautifulsoup4>=4.12.0
+httpx>=0.28.0
+pytest>=8.0.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+nbformat>=5.9.0
+nbconvert>=7.16.0
+ipykernel>=6.29.0
