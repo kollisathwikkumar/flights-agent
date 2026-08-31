@@ -12,7 +12,7 @@
 
 <br/>
 
-[Explore Architecture](#-system-architecture) • [Getting Started](#-getting-started) • [Live Web App](#-web-dashboard) • [Test Suite](#-test-suite--verification) • [Viva Q&A](#-technical-defense--viva-guide)
+[Explore Architecture](#-system-architecture) • [Getting Started](#-getting-started) • [Live Web App](#-web-dashboard) • [Test Suite](#-test-suite--verification)
 
 </div>
 
@@ -281,24 +281,7 @@ pytest -v tests/
 
 ---
 
-## 🎓 Technical Defense & Viva Guide
-
-### Frequently Asked Questions
-
-#### 1. Why use an LLM if flight matching is deterministic?
-> **Answer**: We enforce strict separation of concerns. NVIDIA NIM is utilized exclusively for **Natural Language Understanding (NLU)** — translating conversational human inputs (e.g. *"find a morning flight to Delhi under 10k"*) into structured parameters and maintaining multi-turn context. The LLM is **never allowed to guess or calculate prices**. All pricing calculations, route validations, and budget filtering are performed in deterministic Python code.
-
-#### 2. How does the agent handle regional routes with no direct flights (e.g. Amritsar to Chennai)?
-> **Answer**: Regional routes often have zero direct flights. Point-to-point APIs often return only foreign international through-fares (e.g. Malaysia Airlines at ₹87,788). Our agent features an **Autonomous Multi-Hub Connecting Engine** that automatically queries primary domestic hubs (**DEL, BOM, BLR, HYD**), validates layover times (1 to 12 hours), enforces Indian domestic cabotage rules (filtering foreign carriers), and synthesizes authentic 1-stop domestic itineraries (e.g., IndiGo via DEL at ₹13,126).
-
-#### 3. How is conversation memory maintained across multi-turn queries?
-> **Answer**: Through `SessionMemory`. When a user initially queries *"Delhi to Mumbai under ₹8,000"* and follows up with *"What about next week?"*, the agent retains origin (`DEL`), destination (`BOM`), and budget (`₹8,000`), updating only the departure date. If the user explicitly introduces a new route (*"from Chennai to Kolkata"*), the new input immediately overrides prior memory.
-
-#### 4. What happens when no flights meet the user's budget?
-> **Answer**: The agent executes **Fail-Closed Budget Enforcement**. It refuses to hallucinate a lower price and outputs `Price: UNAVAILABLE` with the exact reason. It simultaneously generates **Smart Alternative Recommendations**: (1) minimum budget needed for the cheapest available flight, (2) nearby airport hubs, and (3) flexible travel date options ($\pm 1$ to 3 days).
-
----
-
 ## 📜 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
