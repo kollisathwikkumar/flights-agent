@@ -55,6 +55,11 @@ When all flights exceed the requested budget, the agent does not produce a blank
 - Nearby departure/arrival airport alternatives.
 - Date flexibility advice ($\pm 1$ to 3 days).
 
+### 6. 🔗 Direct Booking Link Discovery & Scrapling Verification Fallback
+When API booking endpoints return empty or expired links, the agent activates the **Automatic Booking Discovery & Scrapling Fallback Engine**:
+- Synthesizes direct official airline booking deep-links (**Air India**, **IndiGo**, **SpiceJet**, **Akasa Air**, **Emirates**, **Qatar Airways**, **British Airways**, etc.).
+- Performs auxiliary DOM-level verification using **Scrapling** to cross-check visible flight numbers, departure dates, and fares on the target booking page.
+
 ---
 
 ## 🏛️ System Architecture
@@ -97,7 +102,9 @@ flowchart TD
     subgraph STAGE_5_DECIDE [5. DECIDE & VERIFY]
         Ranker --> Winner[Optimal Winning Flight]
         Winner --> BookingAPI[Ignav Booking Links API]
-        BookingAPI --> Scrapling[Scrapling DOM Web Verifier]
+        BookingAPI -- Missing Link Fallback --> AirlineDiscovery[Direct Airline & OTA Deep-Link Discovery]
+        AirlineDiscovery --> Scrapling[Scrapling DOM Web Verifier]
+        BookingAPI -- Link Available --> Scrapling
         Scrapling --> FinalOutput([Formatted Response & Web UI Card])
         SmartFallback --> FinalOutput
     end
