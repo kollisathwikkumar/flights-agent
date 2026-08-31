@@ -418,33 +418,47 @@ class FlightOptionFinderAgent:
 
         trace.append(AgentTraceStep(phase="DECIDE", content=decide_desc))
 
-        # 8. BOOKING LINKS Retrieval (for winning flight)
+        # 8. BOOKING LINKS Retrieval & Scrapling Verification (for winning flight)
         booking_opt: Optional[BookingOption] = None
-        if best_flight and best_flight.ignav_id:
-            try:
-                booking_options = ignav_client.get_booking_links(best_flight.ignav_id)
-                if booking_options:
-                    airline_direct = next((b for b in booking_options if b.provider_type == "airline"), None)
-                    booking_opt = airline_direct or booking_options[0]
-                    best_flight.booking_url = booking_opt.url
-                    best_flight.booking_provider = booking_opt.provider
-                    best_flight.booking_provider_type = booking_opt.provider_type
-            except Exception as e:
-                logger.error(f"Error fetching booking links: {e}")
-
-        # 9. SCRAPLING Web Verification (Auxiliary)
         web_ver: Optional[ScrapingVerificationResult] = None
-        if best_flight and best_flight.booking_url:
+
+        if best_flight:
+            # 8a. Try querying Ignav booking-links API first if ignav_id is present
+            if best_flight.ignav_id:
+                try:
+                    booking_options = ignav_client.get_booking_links(best_flight.ignav_id)
+                    if booking_options:
+                        airline_direct = next((b for b in booking_options if b.provider_type == "airline"), None)
+                        booking_opt = airline_direct or booking_options[0]
+                        best_flight.booking_url = booking_opt.url
+                        best_flight.booking_provider = booking_opt.provider
+                        best_flight.booking_provider_type = booking_opt.provider_type
+                except Exception as e:
+                    logger.error(f"Error fetching booking links from Ignav: {e}")
+
+            # 8b. If booking URL is missing, discover official airline deep-link & verify via Scrapling
             try:
-                web_ver = booking_verifier.verify_booking_page(
-                    booking_url=best_flight.booking_url,
-                    expected_flight=best_flight,
-                    expected_fare=best_flight.price,
+                b_url, b_provider, b_type, web_ver = booking_verifier.find_and_verify_booking(
+                    flight=best_flight,
+                    passengers=search_req.passengers,
+                    cabin_class=search_req.cabin_class,
                 )
+                best_flight.booking_url = b_url
+                best_flight.booking_provider = b_provider
+                best_flight.booking_provider_type = b_type
                 best_flight.web_verification_status = web_ver.status
-                best_flight.web_verification_url = best_flight.booking_url
+                best_flight.web_verification_url = b_url
+
+                if not booking_opt:
+                    booking_opt = BookingOption(
+                        provider=b_provider,
+                        provider_type=b_type,
+                        price=best_flight.price,
+                        currency=best_flight.currency,
+                        url=b_url,
+                    )
             except Exception as e:
-                logger.error(f"Error in web verification: {e}")
+                logger.error(f"Error discovering/verifying booking URL: {e}")
                 web_ver = ScrapingVerificationResult(
                     status="unavailable",
                     url=best_flight.booking_url,

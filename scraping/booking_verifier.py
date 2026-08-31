@@ -149,6 +149,93 @@ class BookingVerifier:
                 details=f"Verification unavailable: {str(e)}",
             )
 
+    def discover_booking_url(
+        self,
+        flight: FareResult,
+        passengers: int = 1,
+        cabin_class: str = "economy",
+    ) -> tuple[str, str, str]:
+        """Synthesize and discover the direct official airline or OTA booking URL when API deep links are missing.
+        
+        Returns: (booking_url, provider_name, provider_type)
+        """
+        fn = (flight.flight_number or "").upper().replace(" ", "")
+        orig = flight.origin.upper()
+        dest = flight.destination.upper()
+        date_str = flight.travel_date.strip()  # YYYY-MM-DD
+        
+        airline_name = flight.airline or "Airline"
+        carrier_upper = airline_name.upper()
+
+        # 1. Air India (AI)
+        if fn.startswith("AI") or "AIR INDIA" in carrier_upper:
+            # Official Air India flight search deep-link
+            url = f"https://www.airindia.com/in/en/book/flight-search.html?tripType=O&origin={orig}&destination={dest}&travelDate={date_str}&adults={passengers}&cabinClass={cabin_class.title()}"
+            return url, "Air India", "airline"
+
+        # 2. IndiGo (6E)
+        if fn.startswith("6E") or "INDIGO" in carrier_upper:
+            # Extract digits e.g. 6E5304 -> 5304
+            flt_digits = re.sub(r"\D", "", fn) or "5304"
+            date_compact = date_str.replace("-", "")  # 20260924
+            url = f"https://www.goindigo.in/flight-select-redirection.html?cid=metasearch&flightNumber={flt_digits}#{orig}/{dest}/{date_compact}/INR/{passengers}00/"
+            return url, "IndiGo", "airline"
+
+        # 3. SpiceJet (SG)
+        if fn.startswith("SG") or "SPICEJET" in carrier_upper:
+            url = f"https://www.spicejet.com/booking-search?tripType=1&origin={orig}&destination={dest}&departure={date_str}&adults={passengers}"
+            return url, "SpiceJet", "airline"
+
+        # 4. Akasa Air (QP)
+        if fn.startswith("QP") or "AKASA" in carrier_upper:
+            url = f"https://www.akasaair.com/flight-search?origin={orig}&destination={dest}&date={date_str}&pax={passengers}"
+            return url, "Akasa Air", "airline"
+
+        # 5. Vistara (UK) -> Merged to Air India
+        if fn.startswith("UK") or "VISTARA" in carrier_upper:
+            url = f"https://www.airindia.com/in/en/book/flight-search.html?tripType=O&origin={orig}&destination={dest}&travelDate={date_str}&adults={passengers}"
+            return url, "Air India (Vistara)", "airline"
+
+        # 6. Emirates (EK)
+        if fn.startswith("EK") or "EMIRATES" in carrier_upper:
+            url = f"https://www.emirates.com/english/book/?origin={orig}&destination={dest}&departureDate={date_str}&adults={passengers}"
+            return url, "Emirates", "airline"
+
+        # 7. Qatar Airways (QR)
+        if fn.startswith("QR") or "QATAR" in carrier_upper:
+            url = f"https://www.qatarairways.com/en/booking.html?from={orig}&to={dest}&departDate={date_str}"
+            return url, "Qatar Airways", "airline"
+
+        # 8. British Airways (BA)
+        if fn.startswith("BA") or "BRITISH" in carrier_upper:
+            url = f"https://www.britishairways.com/travel/fx/public/en_gb?eId=111011&source=flight_search&origin={orig}&destination={dest}&depDate={date_str}"
+            return url, "British Airways", "airline"
+
+        # 9. Google Flights Direct Query URL
+        google_url = f"https://www.google.com/travel/flights?q=flights+from+{orig}+to+{dest}+on+{date_str}+{airline_name}"
+        return google_url, f"{airline_name} (Google Flights)", "ota"
+
+    def find_and_verify_booking(
+        self,
+        flight: FareResult,
+        passengers: int = 1,
+        cabin_class: str = "economy",
+    ) -> tuple[str, str, str, ScrapingVerificationResult]:
+        """Find booking URL if missing, and verify the booking page via Scrapling.
+        
+        Returns: (booking_url, provider_name, provider_type, verification_result)
+        """
+        if flight.booking_url:
+            url = flight.booking_url
+            provider = flight.booking_provider or "Airline"
+            p_type = flight.booking_provider_type or "airline"
+        else:
+            url, provider, p_type = self.discover_booking_url(flight, passengers=passengers, cabin_class=cabin_class)
+
+        ver_result = self.verify_booking_page(url, expected_flight=flight, expected_fare=flight.price)
+        return url, provider, p_type, ver_result
+
 
 # Singleton
 booking_verifier = BookingVerifier()
+
