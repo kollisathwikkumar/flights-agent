@@ -298,7 +298,7 @@ AMBIGUOUS_CITIES: dict[str, list[str]] = {
 }
 
 
-def resolve_airport(query: str, prefer_primary_for_ambiguous: bool = True) -> Optional[AirportResolution]:
+def resolve_airport(query: str, prefer_primary_for_ambiguous: bool = True) -> AirportResolution | None:
     """Resolve any city name, airport name, parenthesized IATA code, or spelling variant worldwide."""
     if not query:
         return None
