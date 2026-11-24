@@ -5,7 +5,6 @@ integrates SessionMemory, strictly enforces hard constraints, selects booking li
 runs auxiliary Scrapling verification, and formats transparent user-facing output.
 """
 
-import json
 import re
 import logging
 from typing import Optional, Any
