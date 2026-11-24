@@ -42,13 +42,13 @@ class IgnavClient:
             "Accept": "application/json",
         }
 
-    def _make_request(self, method: str, endpoint: str, json_data: Optional[dict] = None) -> dict[str, Any]:
+    def _make_request(self, method: str, endpoint: str, json_data: dict | None = None) -> dict[str, Any]:
         """Execute an HTTP request to Ignav with 1 transient retry."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         headers = self._get_headers()
 
         max_attempts = 2
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for attempt in range(1, max_attempts + 1):
             try:
